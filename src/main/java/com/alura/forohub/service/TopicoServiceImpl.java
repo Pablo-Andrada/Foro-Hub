@@ -34,16 +34,13 @@ public class TopicoServiceImpl implements TopicoService {
     @Override
     @Transactional
     public TopicoResponseDto crearTopico(TopicoCreateDto dto) {
-        // 1) Verificar existencia del autor
         Usuario autor = usuarioRepository.findById(dto.autorId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado (id=" + dto.autorId() + ")"));
 
-        // 2) Validar duplicado por título+mensaje
         if (topicoRepository.existsByTituloAndMensaje(dto.titulo(), dto.mensaje())) {
             throw new DuplicadoException("Ya existe un tópico con el mismo título y mensaje.");
         }
 
-        // 3) Construir entidad y persistir
         Topico topico = new Topico();
         topico.setTitulo(dto.titulo().trim());
         topico.setMensaje(dto.mensaje().trim());
@@ -61,7 +58,9 @@ public class TopicoServiceImpl implements TopicoService {
     @Override
     @Transactional(readOnly = true)
     public Page<TopicoResponseDto> listarTopicos(Pageable pageable) {
-        return topicoRepository.findAll(pageable).map(this::mapToResponseDto);
+        // Aquí usamos el método que filtra sólo activos
+        return topicoRepository.findByActivoTrue(pageable)
+                .map(this::mapToResponseDto);
     }
 
     @Override
@@ -69,6 +68,12 @@ public class TopicoServiceImpl implements TopicoService {
     public TopicoResponseDto obtenerDetalle(Long id) {
         Topico topico = topicoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Tópico no encontrado (id=" + id + ")"));
+
+        // Opcional: Si querés que no devuelva tópicos eliminados lógicamente
+        if (Boolean.FALSE.equals(topico.getActivo())) {
+            throw new RecursoNoEncontradoException("Tópico no encontrado (id=" + id + ")");  // simula que no existe
+        }
+
         return mapToResponseDto(topico);
     }
 
@@ -77,6 +82,10 @@ public class TopicoServiceImpl implements TopicoService {
     public TopicoResponseDto actualizarTopico(Long id, TopicoUpdateDto dto) {
         Topico existente = topicoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Tópico no encontrado (id=" + id + ")"));
+
+        if (Boolean.FALSE.equals(existente.getActivo())) {
+            throw new RecursoNoEncontradoException("Tópico no encontrado (id=" + id + ")");
+        }
 
         boolean tituloChanged = !existente.getTitulo().equals(dto.titulo().trim());
         boolean mensajeChanged = !existente.getMensaje().equals(dto.mensaje().trim());
@@ -99,12 +108,12 @@ public class TopicoServiceImpl implements TopicoService {
         Topico existente = topicoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Tópico no encontrado (id=" + id + ")"));
 
-        // Borrado lógico
+        // Borrado lógico: solo seteamos activo = false
         existente.setActivo(false);
         topicoRepository.save(existente);
     }
 
-    // ---- util privado para mapear entidad -> DTO de respuesta
+    // Mapea entidad a DTO de respuesta
     private TopicoResponseDto mapToResponseDto(Topico t) {
         Long autorId = null;
         String autorNombre = null;

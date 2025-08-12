@@ -8,7 +8,6 @@ import org.springframework.data.domain.Pageable;
 
 /**
  * Contrato del servicio de tópicos.
- * Define operaciones principales que el controller utilizará.
  */
 public interface TopicoService {
 

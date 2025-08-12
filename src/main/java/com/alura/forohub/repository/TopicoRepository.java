@@ -16,7 +16,7 @@ import java.util.List;
  *  - chequear duplicados por titulo+mensaje
  *  - obtener primeros 10 ordenados por fecha asc (opcional del challenge)
  *  - búsqueda por curso y búsqueda por intervalo de fechas (p. ej. por año)
- *  - soporte para paginación (findAll(Pageable))
+ *  - soporte para paginación filtrando sólo activos (modificado para borrado lógico)
  */
 @Repository
 public interface TopicoRepository extends JpaRepository<Topico, Long> {
@@ -44,8 +44,7 @@ public interface TopicoRepository extends JpaRepository<Topico, Long> {
     List<Topico> findByCursoAndFechaCreacionBetween(String curso, LocalDateTime start, LocalDateTime end);
 
     /**
-     * Ejemplo: paginación general para listados.
-     * El controlador puede aceptar Pageable y delegar aquí.
+     * Paginación filtrando sólo tópicos activos (excluye borrados lógicos).
      */
-    Page<Topico> findAll(Pageable pageable);
+    Page<Topico> findByActivoTrue(Pageable pageable);
 }
