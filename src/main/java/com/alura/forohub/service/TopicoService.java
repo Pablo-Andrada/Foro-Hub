@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 
 /**
  * Contrato del servicio de tópicos.
+ * Aquí se declaran las operaciones que el controlador podrá invocar.
  */
 public interface TopicoService {
 
@@ -20,4 +21,12 @@ public interface TopicoService {
     TopicoResponseDto actualizarTopico(Long id, TopicoUpdateDto dto);
 
     void eliminarTopico(Long id);
+
+    /**
+     * Reactiva un tópico que fue borrado lógicamente (activo = false).
+     * Si el tópico no existe lanzará una excepción de tipo RecursoNoEncontradoException.
+     *
+     * Retorna el TopicoResponseDto actualizado (activo = true).
+     */
+    TopicoResponseDto reactivarTopico(Long id);
 }

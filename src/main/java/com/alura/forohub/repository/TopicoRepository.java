@@ -8,15 +8,17 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repositorio para la entidad Topico.
  *
- * Incluye métodos de conveniencia para:
- *  - chequear duplicados por titulo+mensaje
- *  - obtener primeros 10 ordenados por fecha asc (opcional del challenge)
- *  - búsqueda por curso y búsqueda por intervalo de fechas (p. ej. por año)
- *  - soporte para paginación filtrando sólo activos (modificado para borrado lógico)
+ * He conservado tus métodos originales y añadí métodos "AndActivoTrue"
+ * que el servicio usa para implementar borrado lógico sin romper nada.
+ *
+ * - NO elimines los métodos existentes si los necesites en otras partes.
+ * - Usa los métodos que terminan en "AndActivoTrue" cuando quieras
+ *   trabajar solo con tópicos activos (GET, PUT, DELETE lógico).
  */
 @Repository
 public interface TopicoRepository extends JpaRepository<Topico, Long> {
@@ -44,7 +46,40 @@ public interface TopicoRepository extends JpaRepository<Topico, Long> {
     List<Topico> findByCursoAndFechaCreacionBetween(String curso, LocalDateTime start, LocalDateTime end);
 
     /**
-     * Paginación filtrando sólo tópicos activos (excluye borrados lógicos).
+     * Ejemplo: paginación general (heredado de JpaRepository).
+     * Nota: este findAll(Pageable) trae TODO (activos e inactivos).
+     * Para listados normales usar findByActivoTrue(pageable).
+     */
+    Page<Topico> findAll(Pageable pageable);
+
+    // ------------------------------------------------------------
+    // MÉTODOS PARA BORRADO LÓGICO / FILTRADO (añadidos)
+    // ------------------------------------------------------------
+
+    /**
+     * Busca un tópico por id solo si está activo.
+     * Útil para GET detalle y UPDATE donde no queremos operar sobre inactivos.
+     */
+    Optional<Topico> findByIdAndActivoTrue(Long id);
+
+    /**
+     * Listado paginado solo con tópicos activos (excluye borrados lógicamente).
+     * Usar esto para el endpoint de listado principal.
      */
     Page<Topico> findByActivoTrue(Pageable pageable);
+
+    /**
+     * Listado primeros 10 activos ordenados por fecha.
+     */
+    List<Topico> findTop10ByActivoTrueOrderByFechaCreacionAsc();
+
+    /**
+     * Búsqueda por curso solo activos.
+     */
+    List<Topico> findByCursoAndActivoTrue(String curso);
+
+    /**
+     * Búsqueda por curso y rango de fechas solo activos.
+     */
+    List<Topico> findByCursoAndFechaCreacionBetweenAndActivoTrue(String curso, LocalDateTime start, LocalDateTime end);
 }

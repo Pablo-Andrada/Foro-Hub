@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
  * Controlador REST para manejar operaciones CRUD sobre Tópicos.
  */
 @RestController
-@RequestMapping("/api/topicos") // prefijo API estándar
+@RequestMapping("/api/topicos")
 public class TopicoController {
 
     private final TopicoService topicoService;
@@ -60,5 +60,17 @@ public class TopicoController {
     public ResponseEntity<Void> eliminarTopico(@PathVariable Long id) {
         topicoService.eliminarTopico(id);
         return ResponseEntity.noContent().build();  // 204 No Content, borrado lógico OK
+    }
+
+    /**
+     * Reactiva un tópico que fue borrado lógicamente.
+     * POST /api/topicos/{id}/reactivar
+     *
+     * Respuesta: 200 con el TopicoResponseDto reactivado.
+     */
+    @PostMapping("/{id}/reactivar")
+    public ResponseEntity<TopicoResponseDto> reactivarTopico(@PathVariable Long id) {
+        TopicoResponseDto dto = topicoService.reactivarTopico(id);
+        return ResponseEntity.ok(dto);
     }
 }
