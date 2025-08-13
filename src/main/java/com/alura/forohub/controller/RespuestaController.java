@@ -29,8 +29,8 @@ public class RespuestaController {
 
     /**
      * POST /api/respuestas
-     * Crea una nueva respuesta. Requiere body con RespuestaCreateDto.
-     * Devuelve 201 Created con el recurso creado.
+     * Crea una nueva respuesta.
+     * Devuelve 201 Created con ubicación del recurso.
      */
     @PostMapping
     public ResponseEntity<RespuestaResponseDto> crearRespuesta(@Valid @RequestBody RespuestaCreateDto dto) {
@@ -46,8 +46,7 @@ public class RespuestaController {
 
     /**
      * GET /api/respuestas?topicoId={id}
-     * Lista paginada de respuestas para un tópico (filtradas por activo=true).
-     * Pageable se construye desde los query params (page,size,sort).
+     * Listado paginado de respuestas de un tópico (activo=true).
      */
     @GetMapping
     public ResponseEntity<Page<RespuestaResponseDto>> listarPorTopico(
@@ -59,7 +58,7 @@ public class RespuestaController {
 
     /**
      * GET /api/respuestas/{id}
-     * Devuelve detalle de una respuesta (si está activa).
+     * Devuelve detalle de una respuesta activa.
      */
     @GetMapping("/{id}")
     public ResponseEntity<RespuestaResponseDto> detalle(@PathVariable Long id) {
@@ -80,7 +79,8 @@ public class RespuestaController {
 
     /**
      * DELETE /api/respuestas/{id}
-     * Borrado lógico: devuelve 204 No Content.
+     * Borrado lógico de una respuesta.
+     * Devuelve 204 No Content.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
@@ -90,8 +90,8 @@ public class RespuestaController {
 
     /**
      * PATCH /api/respuestas/{id}/reactivar
-     * Reactiva una respuesta previamente borrada (activo = true).
-     * Devuelve 200 + DTO reactivado.
+     * Reactiva una respuesta previamente eliminada (activo = true).
+     * Devuelve 200 OK + DTO reactivado.
      */
     @PatchMapping("/{id}/reactivar")
     public ResponseEntity<RespuestaResponseDto> reactivar(@PathVariable Long id) {

@@ -25,6 +25,7 @@ import java.util.Optional;
 @Repository
 public interface TopicoRepository extends JpaRepository<Topico, Long> {
 
+
     /**
      * Comprueba si ya existe un tópico con el mismo título y mensaje.
      * Usado en creación para evitar duplicados exactos.

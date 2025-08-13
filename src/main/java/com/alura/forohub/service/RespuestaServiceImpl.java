@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 /**
  * Implementación del servicio de respuestas.
  * - Se asegura que no se pueda responder a tópicos inactivos.
+ * - Maneja borrado lógico y reactivación de respuestas.
  */
 @Service
 public class RespuestaServiceImpl implements RespuestaService {
@@ -36,18 +37,27 @@ public class RespuestaServiceImpl implements RespuestaService {
         this.topicoRepository = topicoRepository;
     }
 
+    /**
+     * Crear una nueva respuesta.
+     * Valida que el usuario y el tópico existan y que el tópico esté activo.
+     */
     @Override
     @Transactional
     public RespuestaResponseDto crearRespuesta(RespuestaCreateDto dto) {
         Usuario autor = usuarioRepository.findById(dto.autorId())
-                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado (id=" + dto.autorId() + ")"));
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Usuario no encontrado (id=" + dto.autorId() + ")"
+                ));
 
         Topico topico = topicoRepository.findById(dto.topicoId())
-                .orElseThrow(() -> new RecursoNoEncontradoException("Tópico no encontrado (id=" + dto.topicoId() + ")"));
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Tópico no encontrado (id=" + dto.topicoId() + ")"
+                ));
 
-        // No permitir respuestas a tópicos inactivos
         if (!Boolean.TRUE.equals(topico.getActivo())) {
-            throw new RecursoNoEncontradoException("No se puede responder a un tópico inactivo (id=" + topico.getId() + ")");
+            throw new RecursoNoEncontradoException(
+                    "No se puede responder a un tópico inactivo (id=" + topico.getId() + ")"
+            );
         }
 
         Respuesta r = new Respuesta();
@@ -61,6 +71,9 @@ public class RespuestaServiceImpl implements RespuestaService {
         return mapToResponseDto(guardada);
     }
 
+    /**
+     * Listar respuestas activas de un tópico con paginación.
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<RespuestaResponseDto> listarPorTopico(Long topicoId, Pageable pageable) {
@@ -68,26 +81,41 @@ public class RespuestaServiceImpl implements RespuestaService {
                 .map(this::mapToResponseDto);
     }
 
+    /**
+     * Obtener detalle de una respuesta activa.
+     */
     @Override
     @Transactional(readOnly = true)
     public RespuestaResponseDto obtenerDetalle(Long id) {
         Respuesta r = respuestaRepository.findById(id)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Respuesta no encontrada (id=" + id + ")"));
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Respuesta no encontrada (id=" + id + ")"
+                ));
 
         if (!Boolean.TRUE.equals(r.getActivo())) {
-            throw new RecursoNoEncontradoException("Respuesta no encontrada (id=" + id + ")");
+            throw new RecursoNoEncontradoException(
+                    "Respuesta no encontrada (id=" + id + ")"
+            );
         }
+
         return mapToResponseDto(r);
     }
 
+    /**
+     * Actualizar mensaje de una respuesta activa.
+     */
     @Override
     @Transactional
     public RespuestaResponseDto actualizarRespuesta(Long id, RespuestaUpdateDto dto) {
         Respuesta existente = respuestaRepository.findById(id)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Respuesta no encontrada (id=" + id + ")"));
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Respuesta no encontrada (id=" + id + ")"
+                ));
 
         if (!Boolean.TRUE.equals(existente.getActivo())) {
-            throw new RecursoNoEncontradoException("Respuesta no encontrada (id=" + id + ")");
+            throw new RecursoNoEncontradoException(
+                    "Respuesta no encontrada (id=" + id + ")"
+            );
         }
 
         existente.setMensaje(dto.mensaje().trim());
@@ -95,21 +123,31 @@ public class RespuestaServiceImpl implements RespuestaService {
         return mapToResponseDto(actualizada);
     }
 
+    /**
+     * Borrado lógico de una respuesta.
+     */
     @Override
     @Transactional
     public void eliminarRespuesta(Long id) {
         Respuesta existente = respuestaRepository.findById(id)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Respuesta no encontrada (id=" + id + ")"));
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Respuesta no encontrada (id=" + id + ")"
+                ));
 
         existente.setActivo(false);
         respuestaRepository.save(existente);
     }
 
+    /**
+     * Reactivar una respuesta previamente eliminada.
+     */
     @Override
     @Transactional
     public RespuestaResponseDto reactivarRespuesta(Long id) {
         Respuesta existente = respuestaRepository.findById(id)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Respuesta no encontrada (id=" + id + ")"));
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Respuesta no encontrada (id=" + id + ")"
+                ));
 
         if (Boolean.TRUE.equals(existente.getActivo())) {
             return mapToResponseDto(existente);
@@ -120,6 +158,9 @@ public class RespuestaServiceImpl implements RespuestaService {
         return mapToResponseDto(reactivada);
     }
 
+    /**
+     * Mapeo de entidad Respuesta a DTO de respuesta.
+     */
     private RespuestaResponseDto mapToResponseDto(Respuesta r) {
         Long autorId = null;
         String autorNombre = null;
