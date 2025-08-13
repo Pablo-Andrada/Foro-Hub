@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -30,6 +31,7 @@ public class TopicoController {
     /**
      * POST /api/topicos
      * Crea un nuevo tópico. Devuelve 201 Created con el recurso creado.
+     * (Permitir a usuarios autenticados estándar)
      */
     @PostMapping
     public ResponseEntity<TopicoResponseDto> crearTopico(@Valid @RequestBody TopicoCreateDto dto) {
@@ -66,6 +68,7 @@ public class TopicoController {
     /**
      * PUT /api/topicos/{id}
      * Actualiza un tópico existente.
+     * (Permitir a usuarios autenticados estándar)
      */
     @PutMapping("/{id}")
     public ResponseEntity<TopicoResponseDto> actualizar(@PathVariable Long id,
@@ -77,7 +80,9 @@ public class TopicoController {
     /**
      * DELETE /api/topicos/{id}
      * Borrado lógico del tópico.
+     * SOLO ADMIN.
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         topicoService.eliminarTopico(id);
@@ -87,8 +92,9 @@ public class TopicoController {
     /**
      * POST /api/topicos/{id}/reactivar
      * Reactiva un tópico previamente borrado (activo = true).
-     * Cambiado de PATCH a POST para compatibilidad con Spring.
+     * Cambiado a POST para compatibilidad. SOLO ADMIN.
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/reactivar")
     public ResponseEntity<TopicoResponseDto> reactivar(@PathVariable Long id) {
         TopicoResponseDto reactivado = topicoService.reactivarTopico(id);

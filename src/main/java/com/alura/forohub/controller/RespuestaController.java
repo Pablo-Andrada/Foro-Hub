@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -80,8 +81,9 @@ public class RespuestaController {
     /**
      * DELETE /api/respuestas/{id}
      * Borrado lógico de una respuesta.
-     * Devuelve 204 No Content.
+     * SOLO ADMIN.
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         respuestaService.eliminarRespuesta(id);
@@ -91,8 +93,9 @@ public class RespuestaController {
     /**
      * PATCH /api/respuestas/{id}/reactivar
      * Reactiva una respuesta previamente eliminada (activo = true).
-     * Devuelve 200 OK + DTO reactivado.
+     * SOLO ADMIN.
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{id}/reactivar")
     public ResponseEntity<RespuestaResponseDto> reactivar(@PathVariable Long id) {
         RespuestaResponseDto reactivada = respuestaService.reactivarRespuesta(id);
