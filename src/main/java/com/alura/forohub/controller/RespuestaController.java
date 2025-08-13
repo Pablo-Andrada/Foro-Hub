@@ -92,7 +92,7 @@ public class RespuestaController {
 
     /**
      * PATCH /api/respuestas/{id}/reactivar
-     * Reactiva una respuesta previamente eliminada (activo = true).
+     * Reactiva una respuesta previamente eliminada (activo = true ).
      * SOLO ADMIN.
      */
     @PreAuthorize("hasRole('ADMIN')")
