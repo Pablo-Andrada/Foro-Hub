@@ -19,9 +19,7 @@ import java.time.LocalDateTime;
 
 /**
  * Implementación del servicio de respuestas.
- * - Maneja transacciones
- * - Usa repositorios para persistencia
- * - Mapea entidad <-> DTO de respuesta
+ * - Se asegura que no se pueda responder a tópicos inactivos.
  */
 @Service
 public class RespuestaServiceImpl implements RespuestaService {
@@ -41,15 +39,17 @@ public class RespuestaServiceImpl implements RespuestaService {
     @Override
     @Transactional
     public RespuestaResponseDto crearRespuesta(RespuestaCreateDto dto) {
-        // Verificar autor
         Usuario autor = usuarioRepository.findById(dto.autorId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado (id=" + dto.autorId() + ")"));
 
-        // Verificar tópico
         Topico topico = topicoRepository.findById(dto.topicoId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Tópico no encontrado (id=" + dto.topicoId() + ")"));
 
-        // Construcción y persistencia
+        // No permitir respuestas a tópicos inactivos
+        if (!Boolean.TRUE.equals(topico.getActivo())) {
+            throw new RecursoNoEncontradoException("No se puede responder a un tópico inactivo (id=" + topico.getId() + ")");
+        }
+
         Respuesta r = new Respuesta();
         r.setMensaje(dto.mensaje().trim());
         r.setAutor(autor);
@@ -64,7 +64,6 @@ public class RespuestaServiceImpl implements RespuestaService {
     @Override
     @Transactional(readOnly = true)
     public Page<RespuestaResponseDto> listarPorTopico(Long topicoId, Pageable pageable) {
-        // Usamos el método que filtra por activo = true para no devolver borrados lógicos
         return respuestaRepository.findByTopicoIdAndActivoTrue(topicoId, pageable)
                 .map(this::mapToResponseDto);
     }
@@ -76,7 +75,6 @@ public class RespuestaServiceImpl implements RespuestaService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Respuesta no encontrada (id=" + id + ")"));
 
         if (!Boolean.TRUE.equals(r.getActivo())) {
-            // Si está inactiva, para el consumidor equivale a "no encontrada"
             throw new RecursoNoEncontradoException("Respuesta no encontrada (id=" + id + ")");
         }
         return mapToResponseDto(r);
@@ -103,7 +101,6 @@ public class RespuestaServiceImpl implements RespuestaService {
         Respuesta existente = respuestaRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Respuesta no encontrada (id=" + id + ")"));
 
-        // Borrado lógico: marcamos activo = false
         existente.setActivo(false);
         respuestaRepository.save(existente);
     }
@@ -115,7 +112,6 @@ public class RespuestaServiceImpl implements RespuestaService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Respuesta no encontrada (id=" + id + ")"));
 
         if (Boolean.TRUE.equals(existente.getActivo())) {
-            // Si ya está activa devolvemos su DTO (no es error)
             return mapToResponseDto(existente);
         }
 
@@ -124,8 +120,7 @@ public class RespuestaServiceImpl implements RespuestaService {
         return mapToResponseDto(reactivada);
     }
 
-    // ---- util privado para mapear entidad -> DTO
-    private com.alura.forohub.dto.RespuestaResponseDto mapToResponseDto(Respuesta r) {
+    private RespuestaResponseDto mapToResponseDto(Respuesta r) {
         Long autorId = null;
         String autorNombre = null;
         if (r.getAutor() != null) {
@@ -134,7 +129,7 @@ public class RespuestaServiceImpl implements RespuestaService {
         }
         Long topicoId = r.getTopico() != null ? r.getTopico().getId() : null;
 
-        return new com.alura.forohub.dto.RespuestaResponseDto(
+        return new RespuestaResponseDto(
                 r.getId(),
                 r.getMensaje(),
                 r.getFechaCreacion(),

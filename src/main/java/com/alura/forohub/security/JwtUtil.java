@@ -1,92 +1,101 @@
 package com.alura.forohub.security;
 
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
-import java.security.Key;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 
 /**
- * Utilitario para generar y validar JWT.
- *
- * Cambios importantes:
- * - Soporta secret en Base64 o raw.
- * - Valida longitud mínima (32 bytes) necesaria para HS256.
- * - Lanza IllegalArgumentException con mensaje claro si la configuración es inválida.
- *
- * NOTA: No incluir secretos en el repo. Define JWT_SECRET en las variables de entorno.
+ * Clase utilitaria para gestionar JWT (generar, validar y extraer datos).
+ * Contiene métodos compatibles con el código actual y alias para evitar errores.
  */
 @Component
 public class JwtUtil {
 
-    private final Key key;
-    private final long expirationMillis;
+    // Clave secreta para firmar el JWT (en un proyecto real, va en application.properties o variables de entorno)
+    private final String SECRET_KEY = "clave_secreta_super_segura";
 
-    public JwtUtil(
-            @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration:86400000}") long expirationMillis) { // default 1 día si no se pasa
-        if (secret == null || secret.isBlank()) {
-            throw new IllegalArgumentException("La propiedad jwt.secret no está configurada. Define la variable de entorno JWT_SECRET.");
-        }
+    // Duración del token (10 horas)
+    private final long JWT_EXPIRATION = 1000 * 60 * 60 * 10;
 
-        byte[] keyBytes;
-        try {
-            // Intentamos decodificar como Base64 (si el secreto fue generado así)
-            keyBytes = Decoders.BASE64.decode(secret);
-        } catch (Exception e) {
-            // Si falla, usamos los bytes "raw" del string
-            keyBytes = secret.getBytes();
-        }
-
-        if (keyBytes.length < 32) { // 32 bytes = 256 bits -> mínimo recomendado para HS256
-            throw new IllegalArgumentException("jwt.secret demasiado corto. Se requieren al menos 32 bytes (por ejemplo: openssl rand -base64 32).");
-        }
-
-        this.key = Keys.hmacShaKeyFor(keyBytes);
-        this.expirationMillis = expirationMillis;
+    /**
+     * Extrae el nombre de usuario (username) desde el token JWT.
+     */
+    public String extractUsername(String token) {
+        return extractClaim(token, Claims::getSubject);
     }
 
     /**
-     * Genera un token JWT con el username como subject.
+     * Extrae la fecha de expiración desde el token JWT.
+     */
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    /**
+     * Extrae un "claim" específico usando una función.
+     */
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    /**
+     * Extrae todos los claims (datos) del token.
+     */
+    private Claims extractAllClaims(String token) {
+        return Jwts.parser()
+                .setSigningKey(SECRET_KEY)
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    /**
+     * Verifica si el token expiró.
+     */
+    private Boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    /**
+     * Genera un token JWT con un usuario específico (método original en inglés).
+     */
+    public String generateToken(String username) {
+        Map<String, Object> claims = new HashMap<>();
+        return createToken(claims, username);
+    }
+
+    /**
+     * Alias de generateToken, para compatibilidad con el código que llama a "generarToken".
      */
     public String generarToken(String username) {
-        Date ahora = new Date();
-        Date expiracion = new Date(ahora.getTime() + expirationMillis);
+        return generateToken(username);
+    }
 
+    /**
+     * Genera el token usando claims y el usuario.
+     */
+    private String createToken(Map<String, Object> claims, String subject) {
         return Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(ahora)
-                .setExpiration(expiracion)
-                .signWith(key, SignatureAlgorithm.HS256)
+                .setClaims(claims)
+                .setSubject(subject)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + JWT_EXPIRATION))
+                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
                 .compact();
     }
 
     /**
-     * Obtiene el username (subject) desde el token.
-     * Lanza excepción si el token no es parseable.
+     * Valida que el token sea correcto para el usuario y no esté vencido.
      */
-    public String obtenerUsernameDeToken(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
-    }
-
-    /**
-     * Valida que el token sea correcto y no esté expirado.
-     * Devuelve true si válido, false en cualquier error (firma inválida, expirado, corrupto).
-     */
-    public boolean validarToken(String token) {
-        try {
-            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
-        }
+    public Boolean validateToken(String token, UserDetails userDetails) {
+        final String username = extractUsername(token);
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 }

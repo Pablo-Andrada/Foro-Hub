@@ -4,64 +4,80 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.HttpHeaders;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.alura.forohub.security.CustomUserDetailsService;
+import com.alura.forohub.security.JwtUtil;
+
 import java.io.IOException;
-import java.util.Collections;
 
 /**
- * Filtro que intercepta cada petición HTTP para validar JWT.
+ * Filtro que se ejecuta una vez por request (OncePerRequestFilter)
+ * para validar el JWT en endpoints protegidos.
  */
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
-    private final JwtUtil jwtUtil;
+    @Autowired
+    private JwtUtil jwtUtil;
 
-    public JwtFilter(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
-    }
+    @Autowired
+    private CustomUserDetailsService customUserDetailsService;
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain chain)
             throws ServletException, IOException {
 
-        final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        // 1 Obtener encabezado Authorization
+        String authHeader = request.getHeader("Authorization");
+        String token = null;
+        String username = null;
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
+        // 2 Validar formato "Bearer TOKEN"
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7); // Remover "Bearer "
+            try {
+                username = jwtUtil.extractUsername(token);
+            } catch (Exception e) {
+                logger.error("Error al extraer usuario del token: " + e.getMessage());
+            }
         }
 
-        final String token = authHeader.substring(7);
+        // 3 Si obtuvimos usuario y no hay autenticación previa en el contexto
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-        if (!jwtUtil.validarToken(token)) {
-            filterChain.doFilter(request, response);
-            return;
+            // Cargar datos del usuario desde BD usando tu CustomUserDetailsService
+            UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
+
+            // Validar token con los datos del usuario
+            if (jwtUtil.validateToken(token, userDetails)) {
+
+                // Crear objeto de autenticación para Spring Security
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities()
+                        );
+
+                // Asociar detalles de la request
+                authToken.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
+                );
+
+                // Guardar autenticación en el contexto
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
         }
 
-        String username = jwtUtil.obtenerUsernameDeToken(token);
-
-        // Aquí se podrían cargar roles, permisos, etc. Por ahora dejamos solo username y rol simple.
-        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                username,
-                null,
-                Collections.singletonList(new SimpleGrantedAuthority("USER"))
-        );
-
-        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-        // Setear el contexto de seguridad para que el controlador sepa que el usuario está autenticado
-        SecurityContextHolder.getContext().setAuthentication(authToken);
-
-        filterChain.doFilter(request, response);
+        // 4️⃣ Continuar con la cadena de filtros
+        chain.doFilter(request, response);
     }
 }
