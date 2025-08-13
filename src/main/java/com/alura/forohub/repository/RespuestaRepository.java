@@ -11,57 +11,57 @@ import java.util.List;
 /**
  * Repositorio para la entidad Respuesta.
  *
- * He incluido tanto las consultas simples que ya tenías como versiones
- * que filtran por `activo = true` (borrado lógico). De esta forma mantenemos
- * compatibilidad con código existente y añadimos métodos útiles para el servicio.
+ * Incluye:
+ *  - Métodos originales (sin filtro de activo) para compatibilidad.
+ *  - Métodos filtrados por activo=true para manejo de borrado lógico.
  *
- * Conservá los métodos antiguos si hay código que los llama; usá los métodos
- * con "AndActivoTrue" desde el servicio/controller para ignorar respuestas borradas.
+ * Nota: `JpaRepository` ya trae métodos como findAll(), findById(), save(), delete(), etc.
  */
 @Repository
 public interface RespuestaRepository extends JpaRepository<Respuesta, Long> {
 
     // ---------------------------
-    // MÉTODOS ORIGINALES (compatibilidad)
+    // MÉTODOS ORIGINALES (compatibilidad con código existente)
     // ---------------------------
 
     /**
-     * Todas las respuestas asociadas a un tópico (por id del tópico).
-     * Útil para listar en el detalle de un tópico (sin paginar).
-     * <p>
-     * Nota: devuelve también las respuestas marcadas como activo = false.
-     * Para evitar eso, usá findByTopicoIdAndActivoTrue(...)
+     * Lista todas las respuestas asociadas a un tópico (sin paginar).
+     * Incluye también las respuestas inactivas (activo=false).
      */
     List<Respuesta> findByTopicoId(Long topicoId);
 
     /**
-     * Versión con paginación (no filtra por activo).
+     * Lista todas las respuestas asociadas a un tópico (paginadas).
+     * Incluye también las respuestas inactivas (activo=false).
      */
     Page<Respuesta> findByTopicoId(Long topicoId, Pageable pageable);
 
     // ---------------------------
-    // MÉTODOS RECOMENDADOS (filtrando por activo = true)
+    // MÉTODOS RECOMENDADOS (filtran solo las activas)
     // ---------------------------
 
     /**
-     * Lista paginada de respuestas activas para un tópico.
-     * Usar cuando querés mostrar solo respuestas no borradas.
+     * Lista paginada de respuestas activas (activo=true) para un tópico.
+     * Usado en RespuestaServiceImpl.listarPorTopico().
      */
     Page<Respuesta> findByTopicoIdAndActivoTrue(Long topicoId, Pageable pageable);
 
     /**
-     * Lista simple (sin paginar) de respuestas activas de un tópico.
+     * Lista simple (sin paginar) de respuestas activas para un tópico.
      */
     List<Respuesta> findByTopicoIdAndActivoTrue(Long topicoId);
 
     /**
-     * Buscar respuestas activas por autor.
+     * Lista de respuestas activas por id de autor (sin paginar).
      */
     List<Respuesta> findByAutorIdAndActivoTrue(Long autorId);
 
     /**
-     * Búsqueda paginada general (por si necesitás listar todas las respuestas activas).
-     * La implementación de Spring Data permite pasar filtros adicionales si lo necesitás.
+     * Búsqueda paginada de todas las respuestas.
+     *
+     * ⚠️ Este método ya existe implícitamente en JpaRepository como `findAll(Pageable)`.
+     *     Se deja aquí solo si querés documentarlo o sobrescribirlo.
      */
+    @Override
     Page<Respuesta> findAll(Pageable pageable);
 }
