@@ -7,12 +7,15 @@ import com.alura.forohub.service.TopicoService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
 
 /**
- * Controlador REST para manejar operaciones CRUD sobre Tópicos.
+ * Controlador REST para tópicos.
+ * Rutas bajo /api/topicos
  */
 @RestController
 @RequestMapping("/api/topicos")
@@ -24,53 +27,71 @@ public class TopicoController {
         this.topicoService = topicoService;
     }
 
-    // Crear un nuevo tópico
+    /**
+     * POST /api/topicos
+     * Crea un nuevo tópico. Devuelve 201 Created con el recurso creado.
+     */
     @PostMapping
     public ResponseEntity<TopicoResponseDto> crearTopico(@Valid @RequestBody TopicoCreateDto dto) {
         TopicoResponseDto creado = topicoService.crearTopico(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(creado);
+
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(creado.id())
+                .toUri();
+
+        return ResponseEntity.created(location).body(creado);
     }
 
-    // Listar tópicos paginados (solo activos)
+    /**
+     * GET /api/topicos
+     * Listado paginado de tópicos activos.
+     */
     @GetMapping
     public ResponseEntity<Page<TopicoResponseDto>> listarTopicos(Pageable pageable) {
         Page<TopicoResponseDto> page = topicoService.listarTopicos(pageable);
         return ResponseEntity.ok(page);
     }
 
-    // Obtener detalle de un tópico por id
+    /**
+     * GET /api/topicos/{id}
+     * Detalle de un tópico activo.
+     */
     @GetMapping("/{id}")
-    public ResponseEntity<TopicoResponseDto> obtenerDetalle(@PathVariable Long id) {
+    public ResponseEntity<TopicoResponseDto> detalle(@PathVariable Long id) {
         TopicoResponseDto dto = topicoService.obtenerDetalle(id);
         return ResponseEntity.ok(dto);
     }
 
-    // Actualizar un tópico por id (PUT)
+    /**
+     * PUT /api/topicos/{id}
+     * Actualiza un tópico existente.
+     */
     @PutMapping("/{id}")
-    public ResponseEntity<TopicoResponseDto> actualizarTopico(
-            @PathVariable Long id,
-            @Valid @RequestBody TopicoUpdateDto dto) {
-
+    public ResponseEntity<TopicoResponseDto> actualizar(@PathVariable Long id,
+                                                        @Valid @RequestBody TopicoUpdateDto dto) {
         TopicoResponseDto actualizado = topicoService.actualizarTopico(id, dto);
         return ResponseEntity.ok(actualizado);
     }
 
-    // Eliminar un tópico por id (DELETE) - borrado lógico
+    /**
+     * DELETE /api/topicos/{id}
+     * Borrado lógico del tópico.
+     */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarTopico(@PathVariable Long id) {
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         topicoService.eliminarTopico(id);
-        return ResponseEntity.noContent().build();  // 204 No Content, borrado lógico OK
+        return ResponseEntity.noContent().build();
     }
 
     /**
-     * Reactiva un tópico que fue borrado lógicamente.
      * POST /api/topicos/{id}/reactivar
-     *
-     * Respuesta: 200 con el TopicoResponseDto reactivado.
+     * Reactiva un tópico previamente borrado (activo = true).
+     * Cambiado de PATCH a POST para compatibilidad con Spring.
      */
     @PostMapping("/{id}/reactivar")
-    public ResponseEntity<TopicoResponseDto> reactivarTopico(@PathVariable Long id) {
-        TopicoResponseDto dto = topicoService.reactivarTopico(id);
-        return ResponseEntity.ok(dto);
+    public ResponseEntity<TopicoResponseDto> reactivar(@PathVariable Long id) {
+        TopicoResponseDto reactivado = topicoService.reactivarTopico(id);
+        return ResponseEntity.ok(reactivado);
     }
 }
