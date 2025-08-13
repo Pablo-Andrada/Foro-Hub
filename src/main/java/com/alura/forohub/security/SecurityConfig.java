@@ -3,16 +3,21 @@ package com.alura.forohub.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 
 /**
- * Configuración de seguridad con Spring Security y JWT.
+ * Configuración de seguridad principal.
+ *
+ * Cambios:
+ * - Agrego bean PasswordEncoder (BCrypt) para inyectarlo donde haga falta.
+ * - Mantengo tu JWT filter y la configuración stateless.
  */
 @Configuration
 @EnableMethodSecurity
@@ -27,26 +32,27 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // No usamos cookies o sesiones, solo JWT
+                // Stateless (usamos JWT)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // No usamos csrf porque es una API REST (si usas navegador, revisa)
                 .csrf(csrf -> csrf.disable())
-                // Configuramos las rutas públicas y protegidas
                 .authorizeHttpRequests(auth -> auth
-                        // Endpoints públicos (login, registro, etc)
-                        .requestMatchers("/api/auth/**").permitAll()
-                        // El resto requiere autenticación
+                        .requestMatchers("/api/auth/**").permitAll() // login/registro públicos
                         .anyRequest().authenticated()
                 )
-                // Agregar nuestro filtro JWT antes del filtro de autenticación de usuario
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // Para inyectar AuthenticationManager si necesitás luego (por ej login)
+    // Para inyectar AuthenticationManager si se necesita más adelante
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
+    }
+
+    // Bean para el PasswordEncoder (BCrypt). Usalo en controladores/servicios para hashear/validar contraseñas.
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }
