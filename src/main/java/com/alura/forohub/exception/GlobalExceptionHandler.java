@@ -7,6 +7,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -53,6 +54,22 @@ public class GlobalExceptionHandler {
         body.put("errors", errors);
         body.put("path", req.getRequestURI());
         return ResponseEntity.badRequest().body(body);
+    }
+
+    /**
+     * Maneja accesos denegados lanzados explícitamente por la aplicación
+     * (p. ej. AccessDeniedException en servicios).
+     * Retorna 403 Forbidden con mensaje claro.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Object> handleAccessDenied(AccessDeniedException ex, HttpServletRequest req) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", Instant.now());
+        body.put("status", HttpStatus.FORBIDDEN.value());
+        body.put("error", "Forbidden");
+        body.put("message", ex.getMessage());
+        body.put("path", req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
     @ExceptionHandler(Exception.class)

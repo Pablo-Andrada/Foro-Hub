@@ -68,7 +68,7 @@ public class TopicoController {
     /**
      * PUT /api/topicos/{id}
      * Actualiza un tópico existente.
-     * (Permitir a usuarios autenticados estándar)
+     * (Permitir a usuarios autenticados estándar — la validación autor/admin se hace en el servicio)
      */
     @PutMapping("/{id}")
     public ResponseEntity<TopicoResponseDto> actualizar(@PathVariable Long id,

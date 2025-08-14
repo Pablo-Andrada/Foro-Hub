@@ -11,11 +11,25 @@ import com.alura.forohub.repository.TopicoRepository;
 import com.alura.forohub.repository.UsuarioRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+/**
+ * Implementación del servicio de tópicos.
+ *
+ * Cambios principales:
+ *  - En actualizarTopico() se valida que el usuario autenticado sea:
+ *      a) el autor del tópico, o
+ *      b) tenga rol ADMIN
+ *    Si no, se lanza AccessDeniedException (mapeada por GlobalExceptionHandler a 403).
+ *
+ *  - Se mantienen las validaciones de duplicados (excluyendo el propio id).
+ */
 @Service
 public class TopicoServiceImpl implements TopicoService {
 
@@ -27,10 +41,6 @@ public class TopicoServiceImpl implements TopicoService {
         this.usuarioRepository = usuarioRepository;
     }
 
-    /**
-     * Crear un nuevo tópico.
-     * Valida duplicados y asigna autor, fecha, status y activo.
-     */
     @Override
     @Transactional
     public TopicoResponseDto crearTopico(TopicoCreateDto dto) {
@@ -39,12 +49,10 @@ public class TopicoServiceImpl implements TopicoService {
                         "Usuario no encontrado (id=" + dto.autorId() + ")"
                 ));
 
-        // Trim seguro de strings
         String tituloTrim = dto.titulo() != null ? dto.titulo().trim() : "";
         String mensajeTrim = dto.mensaje() != null ? dto.mensaje().trim() : "";
         String cursoTrim = dto.curso() != null ? dto.curso().trim() : "";
 
-        // Validación de duplicados exactos
         if (topicoRepository.existsByTituloAndMensaje(tituloTrim, mensajeTrim)) {
             throw new DuplicadoException("Ya existe un tópico con el mismo título y mensaje.");
         }
@@ -62,9 +70,6 @@ public class TopicoServiceImpl implements TopicoService {
         return mapToResponseDto(guardado);
     }
 
-    /**
-     * Listar tópicos activos paginados.
-     */
     @Override
     @Transactional(readOnly = true)
     public Page<TopicoResponseDto> listarTopicos(Pageable pageable) {
@@ -72,9 +77,6 @@ public class TopicoServiceImpl implements TopicoService {
                 .map(this::mapToResponseDto);
     }
 
-    /**
-     * Obtener detalle de un tópico activo.
-     */
     @Override
     @Transactional(readOnly = true)
     public TopicoResponseDto obtenerDetalle(Long id) {
@@ -86,8 +88,14 @@ public class TopicoServiceImpl implements TopicoService {
     }
 
     /**
-     * Actualizar un tópico.
-     * Valida duplicados ignorando el propio id (false positives).
+     * Actualizar un tópico: ahora con control de ownership.
+     *
+     * Reglas:
+     *  - Recupera el tópico (debe estar activo).
+     *  - Obtiene el username del usuario autenticado desde SecurityContext.
+     *  - Si el username coincide con el autor del tópico -> permite.
+     *  - Si el usuario tiene ROLE_ADMIN -> permite.
+     *  - Si no, lanza AccessDeniedException -> 403.
      */
     @Override
     @Transactional
@@ -97,6 +105,44 @@ public class TopicoServiceImpl implements TopicoService {
                         "Tópico no encontrado (id=" + id + ")"
                 ));
 
+        // --- Ownership check: obtengo username del contexto ---
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String usernameAutenticado = null;
+        boolean isAdmin = false;
+
+        if (auth != null && auth.isAuthenticated()) {
+            Object principal = auth.getPrincipal();
+            // principal puede ser UserDetails o String (depende cómo esté configurado)
+            if (principal instanceof org.springframework.security.core.userdetails.UserDetails ud) {
+                usernameAutenticado = ud.getUsername();
+                isAdmin = ud.getAuthorities().stream()
+                        .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+            } else if (principal instanceof String s) {
+                usernameAutenticado = s;
+                isAdmin = auth.getAuthorities().stream()
+                        .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+            } else {
+                // fallback: verificar autoridades
+                isAdmin = auth.getAuthorities().stream()
+                        .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+            }
+        }
+
+        // Si no autenticado -> AccessDenied (no debería entrar aquí porque la ruta está protegida)
+        if (usernameAutenticado == null && !isAdmin) {
+            throw new AccessDeniedException("Acceso denegado: usuario no autenticado.");
+        }
+
+        // Comparo con el autor del tópico
+        Usuario autor = existente.getAutor();
+        String autorUsername = autor != null ? autor.getUsername() : null;
+
+        // Permitir si es admin o si es el autor
+        if (!isAdmin && (autorUsername == null || !autorUsername.equals(usernameAutenticado))) {
+            throw new AccessDeniedException("Acceso denegado: solo el autor o admin puede modificar este tópico.");
+        }
+
+        // --- Validaciones y lógica de duplicado (igual que antes) ---
         String tituloTrim = dto.titulo() != null ? dto.titulo().trim() : "";
         String mensajeTrim = dto.mensaje() != null ? dto.mensaje().trim() : "";
         String statusTrim = dto.status() != null ? dto.status().trim() : "";
@@ -105,7 +151,6 @@ public class TopicoServiceImpl implements TopicoService {
         boolean tituloChanged = !existente.getTitulo().equals(tituloTrim);
         boolean mensajeChanged = !existente.getMensaje().equals(mensajeTrim);
 
-        // Validación de duplicados solo si hubo cambios
         if (tituloChanged || mensajeChanged) {
             if (topicoRepository.existsByTituloAndMensajeAndIdNot(tituloTrim, mensajeTrim, id)) {
                 throw new DuplicadoException("Otro tópico ya tiene ese título y mensaje.");
@@ -121,9 +166,6 @@ public class TopicoServiceImpl implements TopicoService {
         return mapToResponseDto(actualizado);
     }
 
-    /**
-     * Borrado lógico de un tópico.
-     */
     @Override
     @Transactional
     public void eliminarTopico(Long id) {
@@ -136,9 +178,6 @@ public class TopicoServiceImpl implements TopicoService {
         topicoRepository.save(existente);
     }
 
-    /**
-     * Reactivar un tópico previamente eliminado.
-     */
     @Override
     @Transactional
     public TopicoResponseDto reactivarTopico(Long id) {
@@ -156,9 +195,6 @@ public class TopicoServiceImpl implements TopicoService {
         return mapToResponseDto(reactivado);
     }
 
-    /**
-     * Mapeo de entidad a DTO de respuesta.
-     */
     private TopicoResponseDto mapToResponseDto(Topico t) {
         Long autorId = null;
         String autorNombre = null;

@@ -91,12 +91,12 @@ public class RespuestaController {
     }
 
     /**
-     * PATCH /api/respuestas/{id}/reactivar
-     * Reactiva una respuesta previamente eliminada (activo = true ).
-     * SOLO ADMIN.
+     * POST /api/respuestas/{id}/reactivar
+     * Reactiva una respuesta previamente eliminada (activo = true).
+     * Cambiado a POST para consistencia (igual que tópicos). SOLO ADMIN.
      */
     @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/{id}/reactivar")
+    @PostMapping("/{id}/reactivar")
     public ResponseEntity<RespuestaResponseDto> reactivar(@PathVariable Long id) {
         RespuestaResponseDto reactivada = respuestaService.reactivarRespuesta(id);
         return ResponseEntity.ok(reactivada);

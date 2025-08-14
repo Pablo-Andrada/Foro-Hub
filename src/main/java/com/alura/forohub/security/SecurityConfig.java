@@ -18,12 +18,12 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 /**
  * Configuración de seguridad principal.
  *
- * - Habilita JWT filter.
- * - Fuerza que peticiones sin autenticación reciban 401 (AuthenticationEntryPoint).
- * - Mantiene 403 para accesos denegados (AccessDeniedHandler).
+ * Notas:
+ *  - prePostEnabled = true habilita @PreAuthorize/@PostAuthorize en controllers.
+ *  - Manejo de errores: 401 para no autenticado, 403 para acceso denegado.
  */
 @Configuration
-@EnableMethodSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
@@ -35,33 +35,33 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Stateless: usamos JWT
+                // Stateless: JWT (sin sesión)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // API REST: deshabilitamos CSRF
+                // API REST: desactivar CSRF
                 .csrf(csrf -> csrf.disable())
-                // Rutas públicas y protegidas
+                // Rutas públicas / protegidas
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                // Manejo explícito de errores: 401 para no autenticado, 403 si falta permiso
+                // Manejo explícito de errores (401 y 403)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                         .accessDeniedHandler(new AccessDeniedHandlerImpl())
                 )
-                // Agregar filtro JWT
+                // Añadimos filtro JWT antes del filtro estándar de usuario
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // Para inyectar AuthenticationManager si se necesita (login programático, tests, etc.)
+    // Para inyectar AuthenticationManager si se necesita (tests, login programático)
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
 
-    // BCrypt PasswordEncoder para la app
+    // BCrypt PasswordEncoder: usar en AuthController / creación de usuarios
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
