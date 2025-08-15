@@ -16,14 +16,14 @@ import org.springframework.security.web.access.AccessDeniedHandlerImpl;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 
 /**
- * Configuración de seguridad principal.
+ * Configuración de seguridad central.
  *
- * Notas:
- *  - prePostEnabled = true habilita @PreAuthorize/@PostAuthorize en controllers.
- *  - Manejo de errores: 401 para no autenticado, 403 para acceso denegado.
+ * - Agrega el filtro JWT (jwtFilter).
+ * - Permite acceso público a la documentación OpenAPI/Swagger.
+ * - Mantiene 401 para no autenticados y 403 para accesos denegados.
  */
 @Configuration
-@EnableMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
@@ -35,33 +35,39 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Stateless: JWT (sin sesión)
+                // Stateless: usamos JWT
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // API REST: desactivar CSRF
+                // API REST: deshabilitamos CSRF (si solo consumís desde cliente tipo SPA/API)
                 .csrf(csrf -> csrf.disable())
-                // Rutas públicas / protegidas
+                // Endpoints públicos y protegidos
                 .authorizeHttpRequests(auth -> auth
+                        // Endpoints públicos para autenticación
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Swagger / OpenAPI (hacer públicos para poder testear la UI)
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        // Opcional: permitir acceso a recursos estáticos y root
+                        .requestMatchers("/", "/index.html", "/favicon.ico", "/webjars/**", "/swagger-ui/**").permitAll()
+                        // Resto requiere autenticación
                         .anyRequest().authenticated()
                 )
-                // Manejo explícito de errores (401 y 403)
+                // Manejo explícito de errores: 401 para no autenticado, 403 si falta permiso
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                         .accessDeniedHandler(new AccessDeniedHandlerImpl())
                 )
-                // Añadimos filtro JWT antes del filtro estándar de usuario
+                // Agregar filtro JWT antes del filtro de autenticación por usuario
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // Para inyectar AuthenticationManager si se necesita (tests, login programático)
+    // Para inyectar AuthenticationManager si se necesita (login programático, tests, etc.)
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
 
-    // BCrypt PasswordEncoder: usar en AuthController / creación de usuarios
+    // BCrypt PasswordEncoder para la app
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
