@@ -130,7 +130,7 @@ Si necesitás forzar la contraseña de pablo a admin123:
 ````
 USE forohub;
 UPDATE usuarios
-SET password = '$2a$10$...'  -- reemplazá por el hash generado
+SET password = '$2a$10$...'  - reemplazá por el hash generado
 WHERE username = 'pablo';
 
 ````
