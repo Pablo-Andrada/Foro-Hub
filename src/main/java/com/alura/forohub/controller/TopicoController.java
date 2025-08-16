@@ -5,6 +5,7 @@ import com.alura.forohub.dto.TopicoResponseDto;
 import com.alura.forohub.dto.TopicoUpdateDto;
 import com.alura.forohub.service.TopicoService;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -48,9 +49,10 @@ public class TopicoController {
     /**
      * GET /api/topicos
      * Listado paginado de tópicos activos.
+     * @ParameterObject mejora cómo springdoc/swaggeR UI renderiza los campos de Pageable.
      */
     @GetMapping
-    public ResponseEntity<Page<TopicoResponseDto>> listarTopicos(Pageable pageable) {
+    public ResponseEntity<Page<TopicoResponseDto>> listarTopicos(@ParameterObject Pageable pageable) {
         Page<TopicoResponseDto> page = topicoService.listarTopicos(pageable);
         return ResponseEntity.ok(page);
     }
@@ -68,7 +70,6 @@ public class TopicoController {
     /**
      * PUT /api/topicos/{id}
      * Actualiza un tópico existente.
-     * (Permitir a usuarios autenticados estándar — la validación autor/admin se hace en el servicio)
      */
     @PutMapping("/{id}")
     public ResponseEntity<TopicoResponseDto> actualizar(@PathVariable Long id,

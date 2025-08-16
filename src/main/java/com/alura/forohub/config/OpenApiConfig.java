@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
  * Único bean OpenAPI de la app.
  * Define un security scheme bearerAuth para que Swagger UI muestre Authorize.
  *
- * IMPORTANTE: eliminar/comentar cualquier otro bean OpenAPI (SwaggerConfig, OpenApiConfig antiguo, customOpenAPI).
+ *
  */
 @Configuration
 public class OpenApiConfig {
