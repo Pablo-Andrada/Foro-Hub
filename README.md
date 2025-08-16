@@ -19,7 +19,7 @@ Este README reúne **todo** lo necesario para arrancar, probar y entender el pro
 9. Requests para Insomnia / Postman (todos los ejemplos con método, ruta, headers, body y respuesta esperada)
 10. Roles y pruebas de autorización (qué esperar: 401 vs 403)
 11. Errores comunes y soluciones rápidas
-12. Siguientes pasos recomendados
+
 
 ---
 
