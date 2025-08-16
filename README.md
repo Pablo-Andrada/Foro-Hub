@@ -63,7 +63,7 @@ JWT_EXPIRATION=86400000
 ```
 
 ## 4 — Cómo ejecutar (local)
- 1.Clonar repo:
+1.Clonar repo:
 ````
 git clone https://github.com/Pablo-Andrada/Foro-Hub.git
 cd Foro-Hub
@@ -90,7 +90,7 @@ $env:DB_PASSWORD="tu_pass"
 $env:JWT_SECRET="clave_super_segura_de_32_chars_min"
 $env:JWT_EXPIRATION="86400000"
 ````
-4.Ejecutar: 
+4.Ejecutar:
 ````
 mvn -DskipTests spring-boot:run
 # o si usas wrapper
@@ -103,9 +103,9 @@ Las migraciones están en src/main/resources/db/migration:
 - V1__create_tables.sql — crea tablas usuarios, topicos, respuestas.
 - V2__seed_users.sql — inserta usuarios de prueba (por ej testuser, pablo, usuario1, etc).
 
- 
-  Nota: Si arrancás y Flyway dice "Schema is up to date", estás listo. Si necesitás limpiar y volver a aplicar migraciones, borrá la BD forohub y recreala, o usa herramientas de administración de Flyway con cuidado.
-  
+
+Nota: Si arrancás y Flyway dice "Schema is up to date", estás listo. Si necesitás limpiar y volver a aplicar migraciones, borrá la BD forohub y recreala, o usa herramientas de administración de Flyway con cuidado.
+
 ## 6 — Cómo generar una JWT_SECRET segura
 - Linux/macOS:
 ````
@@ -122,7 +122,7 @@ Si necesitás forzar la contraseña de pablo a admin123:
 
 1. Generar hash BCrypt (desde la clase util del proyecto PasswordHashGenerator o usando una herramienta):
 
-   - Ejecutá la clase com.alura.forohub.util.PasswordHashGenerator con argumento admin123 desde tu IDE. Se imprime el hash.
+    - Ejecutá la clase com.alura.forohub.util.PasswordHashGenerator con argumento admin123 desde tu IDE. Se imprime el hash.
 
 
 2. En MySQL:
@@ -143,7 +143,7 @@ WHERE username = 'pablo';
 
 ## 8 — Endpoints principales (resumen)
 Base URL: http://localhost:8080/api
-### Auth 
+### Auth
 
 - POST /api/auth/register — registrar usuario (dev/test)
 - POST /api/auth/login — obtener JWT { "token": "..." }
@@ -346,7 +346,7 @@ Para requests protegidos, primero genera token con /api/auth/login y usa header 
 - Headers: Authorization: Bearer {TOKEN_PABLO}
 
 - Expected: 403 Forbidden (si token válido y pablo no es admin).
-Si recibís 401, revisá token (formato/expiración) o logs del servidor.
+  Si recibís 401, revisá token (formato/expiración) o logs del servidor.
 
 ## 10 — Roles y comportamiento esperado (401 vs 403)
 
@@ -358,9 +358,9 @@ Ejemplo:
 
 - Si pablo (ROLE_USER) envía DELETE /api/topicos/3:
 
-   - Si token válido → 403 (no tiene rol ADMIN).
+    - Si token válido → 403 (no tiene rol ADMIN).
 
-   - Si token inválido/expirado o no enviado → 401.
+    - Si token inválido/expirado o no enviado → 401.
 
 ## 11 — Errores comunes y soluciones rápidas
 
