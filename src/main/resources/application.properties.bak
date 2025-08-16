@@ -1,0 +1,43 @@
+# =========================
+# Nombre de la aplicación
+# =========================
+spring.application.name=forohub
+
+# =========================
+# CONFIGURACIÓN BASE DE DATOS (MySQL)
+# =========================
+# URL de conexión a MySQL (ajustar puerto y nombre de la BD según tu entorno)
+spring.datasource.url=jdbc:mysql://localhost:3306/forohub?useSSL=false&serverTimezone=UTC
+
+# Usuario y contraseña desde variables de entorno (NO hardcodear valores)
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
+
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# =========================
+# JPA / HIBERNATE
+# =========================
+# Usamos Flyway para migraciones: no dejamos que Hibernate cree tablas automáticamente
+spring.jpa.hibernate.ddl-auto=none
+
+# Mostrar SQL en consola (útil para debug)
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+# =========================
+# FLYWAY (migraciones)
+# =========================
+spring.flyway.enabled=true
+spring.flyway.locations=classpath:db/migration
+
+# =========================
+# JWT (Preparado para implementación)
+# =========================
+# Clave secreta del JWT (usar valor fuerte en entorno real)
+jwt.secret=${JWT_SECRET}
+
+# Tiempo de expiración del token en milisegundos (ej: 86400000 = 1 día)
+jwt.expiration=${JWT_EXPIRATION:86400000}
+
+
